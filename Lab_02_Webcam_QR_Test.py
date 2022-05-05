@@ -37,6 +37,13 @@ cap.set(4,480)
 #1280.0 x 1024.0
 time.sleep(2)
 
+import serial
+import time
+arduino = serial.Serial(port='/dev/ttyACM0', baudrate=9600, timeout=.1)
+def write(signal):
+    print("printing ")
+    arduino.write(bytes(signal, 'utf-8'))
+
 def decode(im) :
     # Find barcodes and QR codes
     decodedObjects = pyzbar.decode(im)
@@ -49,6 +56,8 @@ def decode(im) :
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
+qr_value = ""
+
 while(cap.isOpened()):
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -56,8 +65,7 @@ while(cap.isOpened()):
     im = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
          
     decodedObjects = decode(im)
-
-    for decodedObject in decodedObjects: 
+    for decodedObject in decodedObjects:
         points = decodedObject.polygon
      
         # If the points do not form a quad, find convex hull
@@ -80,13 +88,23 @@ while(cap.isOpened()):
 
         print('Type : ', decodedObject.type)
         print('Data : ', decodedObject.data,'\n')
-
+        print(f"qr value {qr_value}")
+        if qr_value == decodedObject.data:
+            continue
+        qr_value = decodedObject.data
         barCode = str(decodedObject.data)
         cv2.putText(frame, barCode, (x, y), font, 1, (0,255,255), 2, cv2.LINE_AA)
         text.delete("1.0", "end")
 #        text.quit()
-        text.insert(END, decodedObject.data)
+        text.insert(END, qr_value)
         gui.update()
+        time.sleep(2)
+        if(qr_value == b'3 Ibuprofen\n2 TicTac\n'):
+            write("01001010011")
+        elif(qr_value == b'2 Asprin\n4 TicTac\n'):
+            write("2")
+        else:
+            write("3")
 
     # Display the resulting frame
     cv2.imshow('frame',frame)
@@ -99,3 +117,6 @@ while(cap.isOpened()):
 # When everything done, release the capture
 cap.release()
 #cv2.destroyAllWindows()
+
+
+
